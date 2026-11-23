@@ -1,0 +1,364 @@
+-------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:\Users\wzq\AppData\Local\Temp\figure3-legacy-00c52a7e-74db-4c46-
+> a7cd-32aa03127892/output/Animal_AMU.log
+  log type:  text
+ opened on:  23 Nov 2026, 13:47:02
+
+. 
+. foreach cmd in ftools reghdfe did2s event_plot csdid stackedev {
+  2.     cap which `cmd'
+  3.     if _rc {
+  4.         di as error "Required command `cmd' is unavailable."
+  5.         exit 199
+  6.     }
+  7. }
+
+. 
+. use "`datadir'/Animal_AMU.dta", clear
+
+. rename amu Y
+
+. rename id i
+
+. tsset i t
+
+Panel variable: i (strongly balanced)
+ Time variable: t, 2010 to 2022
+         Delta: 1 unit
+
+. 
+. * First policy year by country; never-treated countries retain a missing Ei.
+. by i (t): egen Ei = min(cond(D == 1, t, .))
+(39 missing values generated)
+
+. gen K = t - Ei
+(39 missing values generated)
+
+. 
+. * Obtain the full observed range among treated country-year observations.
+. quietly summarize K, meanonly
+
+. local kmin = r(min)
+
+. local kmax = r(max)
+
+. di as result "Observable event-time range: `kmin' to `kmax'"
+Observable event-time range: -9 to 12
+
+. 
+. * K=-1 is the omitted reference period.
+. forvalues k = `kmin'/-2 {
+  2.     local a = abs(`k')
+  3.     gen F`a'event = (K == `k')
+  4. }
+
+. forvalues k = 0/`kmax' {
+  2.     gen L`k'event = (K == `k')
+  3. }
+
+. 
+. * 1. Callaway and Sant'Anna (2020)
+. gen gvar = cond(missing(Ei), 0, Ei)
+
+. csdid Y, ivar(i) time(t) gvar(gvar) agg(event)
+Units always treated found. These will be ignored
+..................................................
+..................................................
+........
+Difference-in-difference with Multiple Time Periods
+
+                                                           Number of obs = 364
+Outcome model  : regression adjustment
+Treatment model: none
+------------------------------------------------------------------------------
+             | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+     Pre_avg |   2.947667   5.999603     0.49   0.623    -8.811338    14.70667
+    Post_avg |  -18.07505   17.36926    -1.04   0.298    -52.11817    15.96807
+         Tm8 |   20.50482   20.59818     1.00   0.320    -19.86688    60.87651
+         Tm7 |  -2.386538   8.822616    -0.27   0.787    -19.67855    14.90547
+         Tm6 |   9.425698    12.3719     0.76   0.446    -14.82279    33.67418
+         Tm5 |  -3.045072   6.255316    -0.49   0.626    -15.30527    9.215123
+         Tm4 |  -2.271172   7.381065    -0.31   0.758    -16.73779    12.19545
+         Tm3 |   4.412638   8.376264     0.53   0.598    -12.00454    20.82982
+         Tm2 |  -11.12057   7.850937    -1.42   0.157    -26.50812    4.266984
+         Tm1 |   8.061536   5.568488     1.45   0.148      -2.8525    18.97557
+         Tp0 |   1.024793   6.821347     0.15   0.881     -12.3448    14.39439
+         Tp1 |   .2445725   7.260359     0.03   0.973    -13.98547    14.47461
+         Tp2 |  -6.080486   7.041842    -0.86   0.388    -19.88224    7.721272
+         Tp3 |   1.893443   10.34488     0.18   0.855    -18.38215    22.16904
+         Tp4 |  -7.465702   12.67035    -0.59   0.556    -32.29913    17.36773
+         Tp5 |  -4.238938   17.74492    -0.24   0.811    -39.01835    30.54047
+         Tp6 |  -3.751008   24.36909    -0.15   0.878    -51.51354    44.01152
+         Tp7 |  -18.41788   26.02967    -0.71   0.479    -69.43509    32.59934
+         Tp8 |  -26.71125   32.32072    -0.83   0.409    -90.05871     36.6362
+         Tp9 |  -39.06139   33.64684    -1.16   0.246     -105.008    26.88521
+        Tp10 |  -80.15633   38.28301    -2.09   0.036    -155.1896   -5.123004
+        Tp11 |  -34.18043   41.00975    -0.83   0.405    -114.5581    46.19721
+------------------------------------------------------------------------------
+Control: Never Treated
+
+See Callaway and Sant'Anna (2021) for details
+
+. matrix cs_b = e(b)
+
+. matrix cs_v = e(V)
+
+. 
+. * 2. Gardner DID-2S (2021)
+. did2s Y, first_stage(i.i i.t) second_stage(F*event L*event) treatment(D) clus
+> ter(i)
+(0 observations deleted)
+                                      (Std. err. adjusted for clustering on i)
+------------------------------------------------------------------------------
+             | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+     F9event |  -5.643894   5.719686    -0.99   0.324    -16.85427    5.566484
+     F8event |  -2.643242   4.158711    -0.64   0.525    -10.79417    5.507683
+     F7event |   1.190206   3.610471     0.33   0.742    -5.886188    8.266599
+     F6event |  -.9081025   2.702047    -0.34   0.737    -6.204018    4.387813
+     F5event |   3.978013   3.258334     1.22   0.222    -2.408205    10.36423
+     F4event |  -.3793795   3.117076    -0.12   0.903    -6.488736    5.729977
+     F3event |   1.640108   2.367444     0.69   0.488    -2.999998    6.280214
+     F2event |  -3.967195   2.084901    -1.90   0.057    -8.053526    .1191354
+     L0event |  -16.21429   12.16366    -1.33   0.183    -40.05463    7.626042
+     L1event |  -15.75157   12.31346    -1.28   0.201    -39.88551     8.38237
+     L2event |  -20.89253   12.05433    -1.73   0.083    -44.51859    2.733524
+     L3event |  -14.53094   14.03647    -1.04   0.301    -42.04192    12.98005
+     L4event |  -25.00305   15.38984    -1.62   0.104    -55.16658    5.160472
+     L5event |  -24.68778   18.98925    -1.30   0.194    -61.90602    12.53046
+     L6event |  -31.63486   21.97782    -1.44   0.150     -74.7106    11.44088
+     L7event |   -44.0911   21.54532    -2.05   0.041    -86.31915    -1.86305
+     L8event |  -54.36021   24.26571    -2.24   0.025    -101.9201   -6.800283
+     L9event |  -76.93819   22.83805    -3.37   0.001    -121.6999   -32.17643
+    L10event |   -102.012   18.88565    -5.40   0.000    -139.0272   -64.99683
+    L11event |  -94.04111    25.1274    -3.74   0.000    -143.2899   -44.79232
+    L12event |  -100.4471   23.15848    -4.34   0.000    -145.8369   -55.05732
+------------------------------------------------------------------------------
+
+. matrix did2s_b = e(b)
+
+. matrix did2s_v = e(V)
+
+. 
+. * 3. Stacked event-study DID (Cengiz et al., 2019)
+. gen treat_year = Ei
+(39 missing values generated)
+
+. gen no_treat = missing(Ei)
+
+. foreach var of varlist F*event L*event {
+  2.     replace `var' = 0 if no_treat
+  3. }
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+
+. preserve
+
+. stackedev Y F*event L*event, cohort(treat_year) time(t) ///
+>     never_treat(no_treat) unit_fe(i) clust_unit(i)
+**** Building Stack 2010 ****
+**** Building Stack 2011 ****
+**** Building Stack 2012 ****
+**** Building Stack 2013 ****
+**** Building Stack 2014 ****
+**** Building Stack 2015 ****
+**** Building Stack 2016 ****
+**** Building Stack 2017 ****
+**** Building Stack 2018 ****
+**** Building Stack 2019 ****
+**** Appending Stacks ****
+**** Estimating Model with reghdfe ****
+(MWFE estimator converged in 2 iterations)
+
+HDFE Linear regression                            Number of obs   =        754
+Absorbing 2 HDFE groups                           F(  21,     57) =       1.60
+Statistics robust to heteroskedasticity           Prob > F        =     0.0832
+                                                  R-squared       =     0.9182
+                                                  Adj R-squared   =     0.8872
+                                                  Within R-sq.    =     0.0196
+Number of clusters (unit_stack) =         58      Root MSE        =    28.0332
+
+                            (Std. err. adjusted for 58 clusters in unit_stack)
+------------------------------------------------------------------------------
+             |               Robust
+           Y | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+     F9event |  -19.95181   30.11472    -0.66   0.510    -80.25549    40.35187
+     F8event |  -7.070168   16.52421    -0.43   0.670    -40.15933      26.019
+     F7event |  -4.203744   19.27109    -0.22   0.828    -42.79344    34.38596
+     F6event |  -7.755302   14.80034    -0.52   0.602    -37.39247    21.88187
+     F5event |   3.153959   13.54778     0.23   0.817      -23.975    30.28292
+     F4event |  -1.677732   10.82877    -0.15   0.877    -23.36197     20.0065
+     F3event |  -1.066062   8.353792    -0.13   0.899    -17.79424    15.66212
+     F2event |  -8.243599    6.33585    -1.30   0.198    -20.93092    4.443722
+     L0event |  -.3049881   7.544582    -0.04   0.968    -15.41275    14.80278
+     L1event |   2.228076   7.349175     0.30   0.763    -12.48839    16.94454
+     L2event |  -6.663051   7.660904    -0.87   0.388    -22.00375    8.677644
+     L3event |   1.817347   9.154669     0.20   0.843    -16.51456    20.14926
+     L4event |  -6.140207   10.65646    -0.58   0.567    -27.47941    15.19899
+     L5event |  -8.728538   13.70337    -0.64   0.527    -36.16906    18.71199
+     L6event |  -.7679752   15.53153    -0.05   0.961    -31.86933    30.33338
+     L7event |  -6.561472    15.2058    -0.43   0.668    -37.01055    23.88761
+     L8event |  -10.52007    17.4484    -0.60   0.549     -45.4599    24.41976
+     L9event |  -22.38711   19.80538    -1.13   0.263     -62.0467    17.27248
+    L10event |  -24.47788   27.31976    -0.90   0.374    -79.18477      30.229
+    L11event |   12.29272   21.65572     0.57   0.573     -31.0721    55.65754
+    L12event |   34.89776   28.06109     1.24   0.219    -21.29361    91.08912
+       _cons |   97.75249   2.865712    34.11   0.000       92.014     103.491
+------------------------------------------------------------------------------
+
+Absorbed degrees of freedom:
+-----------------------------------------------------+
+ Absorbed FE | Categories  - Redundant  = Num. Coefs |
+-------------+---------------------------------------|
+     i#stack |        58          58           0    *|
+     t#stack |       130           1         129     |
+-----------------------------------------------------+
+* = FE nested within cluster; treated as redundant for DoF computation
+
+. restore
+
+. matrix stackedev_b = e(b)
+
+. matrix stackedev_v = e(V)
+
+. 
+. * 4. Conventional TWFE event study
+. reghdfe Y F*event L*event, absorb(i t) vce(cluster i)
+(MWFE estimator converged in 2 iterations)
+
+HDFE Linear regression                            Number of obs   =        403
+Absorbing 2 HDFE groups                           F(  21,     30) =       3.80
+Statistics robust to heteroskedasticity           Prob > F        =     0.0005
+                                                  R-squared       =     0.9073
+                                                  Adj R-squared   =     0.8901
+                                                  Within R-sq.    =     0.0345
+Number of clusters (i)       =         31         Root MSE        =    30.5873
+
+                                     (Std. err. adjusted for 31 clusters in i)
+------------------------------------------------------------------------------
+             |               Robust
+           Y | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+     F9event |    -17.647   24.55665    -0.72   0.478    -67.79838    32.50437
+     F8event |   -14.9198   20.40935    -0.73   0.470    -56.60125    26.76165
+     F7event |  -2.603514   21.85384    -0.12   0.906    -47.23501    42.02798
+     F6event |  -7.730129   17.79905    -0.43   0.667    -44.08063    28.62037
+     F5event |   1.093564   14.84424     0.07   0.942    -29.22242    31.40955
+     F4event |  -2.890014   10.92135    -0.26   0.793    -25.19439    19.41437
+     F3event |  -3.100543   9.038477    -0.34   0.734    -21.55958    15.35849
+     F2event |  -5.705949   5.325544    -1.07   0.293    -16.58216    5.170263
+     L0event |    .215643   6.989579     0.03   0.976    -14.05898    14.49027
+     L1event |  -.8175761   8.430593    -0.10   0.923    -18.03514    16.39999
+     L2event |  -5.492085    9.89314    -0.56   0.583    -25.69657     14.7124
+     L3event |  -1.741767   12.04452    -0.14   0.886    -26.33996    22.85643
+     L4event |  -8.795105   15.34325    -0.57   0.571    -40.13019    22.53998
+     L5event |   -8.20651   19.17089    -0.43   0.672    -47.35869    30.94567
+     L6event |  -4.832612   22.81985    -0.21   0.834    -51.43697    41.77175
+     L7event |  -8.046194   24.26879    -0.33   0.743    -57.60968     41.5173
+     L8event |  -14.28555   27.70757    -0.52   0.610    -70.87195    42.30085
+     L9event |  -20.92272   31.20313    -0.67   0.508    -84.64801    42.80257
+    L10event |  -22.68037   39.94704    -0.57   0.574    -104.2631    58.90237
+    L11event |   10.63647   37.24492     0.29   0.777     -65.4278    86.70074
+    L12event |   24.81921   37.52503     0.66   0.513    -51.81712    101.4555
+       _cons |   96.95505   5.085629    19.06   0.000     86.56881    107.3413
+------------------------------------------------------------------------------
+
+Absorbed degrees of freedom:
+-----------------------------------------------------+
+ Absorbed FE | Categories  - Redundant  = Num. Coefs |
+-------------+---------------------------------------|
+           i |        31          31           0    *|
+           t |        13           1          12     |
+-----------------------------------------------------+
+* = FE nested within cluster; treated as redundant for DoF computation
+
+. estimates store ols
+
+. 
+. * Combined figure: third palette trial (red/orange/navy/emerald), vsmall
+. * filled-circle markers, thin 60%-opacity CI lines with short caps,
+. * series dodged by -0.21(0.08)0.21.
+. event_plot cs_b#cs_v did2s_b#did2s_v stackedev_b#stackedev_v ols, ///
+>     stub_lag(Tp# L#event L#event L#event) ///
+>     stub_lead(Tm# F#event F#event F#event) ///
+>     plottype(scatter) ciplottype(rcap) together ///
+>     perturb(-0.21(0.08)0.21) noautolegend ///
+>     trimlead(`=abs(`kmin')') trimlag(`kmax') ///
+>     graph_opt( ///
+>     xtitle("Time since NAP launch (years)") ///
+>     ytitle("Animal AMU") xlabel(`kmin'(1)`kmax', nogrid) ///
+>     xscale(range(`kmin' `kmax') extend) ylabel(, angle(horizontal) nogrid) //
+> /
+>     legend(order(1 "Callaway-Sant'Anna" 3 "Gardner DID-2S" 5 "Stacked DID" 7 
+> "TWFE OLS") ///
+>     rows(2) position(6) region(style(none))) ///
+>     xline(-0.5, lcolor(gs8) lpattern(dash)) yline(0, lcolor(gs8)) ///
+>     graphregion(color(white)) bgcolor(white)) ///
+>     /// 1) Callaway-Sant'Anna in red
+>     lag_opt1(mcolor(red) lcolor(red) msymbol(circle) msize(vsmall)) ///
+>     lead_opt1(mcolor(red) lcolor(red) msymbol(circle) msize(vsmall)) ///
+>     lag_ci_opt1(lcolor(red%60) lwidth(thin) msize(vsmall)) ///
+>     lead_ci_opt1(lcolor(red%60) lwidth(thin) msize(vsmall)) ///
+>     /// 2) Gardner DID-2S in orange
+>     lag_opt2(mcolor(orange) lcolor(orange) msymbol(circle) msize(vsmall)) ///
+>     lead_opt2(mcolor(orange) lcolor(orange) msymbol(circle) msize(vsmall)) //
+> /
+>     lag_ci_opt2(lcolor(orange%60) lwidth(thin) msize(vsmall)) ///
+>     lead_ci_opt2(lcolor(orange%60) lwidth(thin) msize(vsmall)) ///
+>     /// 3) Stacked DID in navy
+>     lag_opt3(mcolor(navy) lcolor(navy) msymbol(circle) msize(vsmall)) ///
+>     lead_opt3(mcolor(navy) lcolor(navy) msymbol(circle) msize(vsmall)) ///
+>     lag_ci_opt3(lcolor(navy%60) lwidth(thin) msize(vsmall)) ///
+>     lead_ci_opt3(lcolor(navy%60) lwidth(thin) msize(vsmall)) ///
+>     /// 4) TWFE OLS in emerald
+>     lag_opt4(mcolor(emerald) lcolor(emerald) msymbol(circle) msize(vsmall)) /
+> //
+>     lead_opt4(mcolor(emerald) lcolor(emerald) msymbol(circle) msize(vsmall)) 
+> ///
+>     lag_ci_opt4(lcolor(emerald%60) lwidth(thin) msize(vsmall)) ///
+>     lead_ci_opt4(lcolor(emerald%60) lwidth(thin) msize(vsmall))
+
+. * width(2155): match the resolution of the GUI-exported v2 PNGs.
+. graph export "`outdir'/Animal_AMU.png", width(2155) replace
+(file
+    C:\Users\wzq\AppData\Local\Temp\figure3-legacy-00c52a7e-74db-4c46-a7cd-32
+    > aa03127892/output/Animal_AMU.png not found)
+file
+    C:\Users\wzq\AppData\Local\Temp\figure3-legacy-00c52a7e-74db-4c46-a7cd-32
+    > aa03127892/output/Animal_AMU.png saved as PNG format
+
+. graph export "`outdir'/Animal_AMU.pdf", replace
+file
+    C:\Users\wzq\AppData\Local\Temp\figure3-legacy-00c52a7e-74db-4c46-a7cd-32
+    > aa03127892/output/Animal_AMU.pdf saved as PDF format
+
+. 
+. log close
+      name:  <unnamed>
+       log:  C:\Users\wzq\AppData\Local\Temp\figure3-legacy-00c52a7e-74db-4c46-
+> a7cd-32aa03127892/output/Animal_AMU.log
+  log type:  text
+ closed on:  23 Nov 2026, 13:47:08
+-------------------------------------------------------------------------------

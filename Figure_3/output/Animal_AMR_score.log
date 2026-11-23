@@ -1,0 +1,369 @@
+-------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:\Users\wzq\AppData\Local\Temp\figure3-legacy-00c52a7e-74db-4c46-
+> a7cd-32aa03127892/output/Animal_AMR_score.log
+  log type:  text
+ opened on:  23 Nov 2026, 13:46:55
+
+. 
+. foreach cmd in ftools reghdfe did2s event_plot csdid stackedev {
+  2.     cap which `cmd'
+  3.     if _rc {
+  4.         di as error "Required command `cmd' is unavailable."
+  5.         exit 199
+  6.     }
+  7. }
+
+. 
+. use "`datafile'", clear
+
+. rename amr Y
+
+. tsset i t
+
+Panel variable: i (strongly balanced)
+ Time variable: t, 2009 to 2023
+         Delta: 1 unit
+
+. by i (t): egen Ei = min(cond(D == 1, t, .))
+(45 missing values generated)
+
+. gen K = t - Ei
+(45 missing values generated)
+
+. 
+. * Event-time dummies within the requested display/estimation window;
+. * K=-1 is the omitted reference period.
+. forvalues k = `kmin'/-2 {
+  2.     local a = abs(`k')
+  3.     gen F`a'event = (K == `k')
+  4. }
+
+. forvalues k = 0/`kmax' {
+  2.     gen L`k'event = (K == `k')
+  3. }
+
+. 
+. * 1. Callaway and Sant'Anna (2020)
+. gen gvar = cond(missing(Ei), 0, Ei)
+
+. csdid Y, ivar(i) time(t) gvar(gvar) agg(event)
+Units always treated found. These will be ignored
+..................................................
+..................................................
+........................................
+Difference-in-difference with Multiple Time Periods
+
+                                                           Number of obs = 405
+Outcome model  : regression adjustment
+Treatment model: none
+------------------------------------------------------------------------------
+             | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+     Pre_avg |  -.1726768   .9325936    -0.19   0.853    -2.000527    1.655173
+    Post_avg |  -3.778704   2.369675    -1.59   0.111    -8.423181    .8657727
+        Tm13 |  -3.243159   4.066778    -0.80   0.425     -11.2139    4.727579
+        Tm12 |   2.488845   7.303024     0.34   0.733    -11.82482    16.80251
+        Tm11 |   3.190304   7.558802     0.42   0.673    -11.62468    18.00528
+        Tm10 |  -3.903421   1.204451    -3.24   0.001    -6.264101   -1.542741
+         Tm9 |    3.34133   6.232659     0.54   0.592    -8.874457    15.55712
+         Tm8 |  -5.042506   5.161631    -0.98   0.329    -15.15912    5.074105
+         Tm7 |  -1.772873   3.877186    -0.46   0.647    -9.372018    5.826273
+         Tm6 |   -.171384   3.886245    -0.04   0.965    -7.788283    7.445515
+         Tm5 |   2.622779     4.1839     0.63   0.531    -5.577514    10.82307
+         Tm4 |  -1.074313   2.262566    -0.47   0.635    -5.508862    3.360235
+         Tm3 |  -.3554022   1.911859    -0.19   0.853    -4.102577    3.391773
+         Tm2 |   2.173119     1.1862     1.83   0.067    -.1517901    4.498027
+         Tm1 |  -.4981158   2.388531    -0.21   0.835     -5.17955    4.183318
+         Tp0 |  -3.422344   2.861065    -1.20   0.232    -9.029929    2.185241
+         Tp1 |  -1.247819   2.000135    -0.62   0.533    -5.168012    2.672374
+         Tp2 |  -4.118272   2.677107    -1.54   0.124    -9.365306    1.128762
+         Tp3 |   -4.26101   2.787507    -1.53   0.126    -9.724423    1.202402
+         Tp4 |  -4.752885   2.252394    -2.11   0.035    -9.167496   -.3382741
+         Tp5 |  -2.273743   2.570981    -0.88   0.376    -7.312774    2.765287
+         Tp6 |  -4.015201   3.266995    -1.23   0.219    -10.41839    2.387991
+         Tp7 |  -1.799272   3.135747    -0.57   0.566    -7.945222    4.346679
+         Tp8 |  -3.645391   1.957275    -1.86   0.063     -7.48158    .1907983
+         Tp9 |  -.7849931   4.215039    -0.19   0.852    -9.046318    7.476332
+        Tp10 |  -3.717705   6.757804    -0.55   0.582    -16.96276    9.527348
+        Tp11 |   .1955009   3.911009     0.05   0.960    -7.469936    7.860938
+        Tp12 |  -2.445605   7.426001    -0.33   0.742     -17.0003    12.10909
+        Tp13 |  -16.61312   4.148407    -4.00   0.000    -24.74385    -8.48239
+------------------------------------------------------------------------------
+Control: Never Treated
+
+See Callaway and Sant'Anna (2021) for details
+
+. matrix cs_b = e(b)
+
+. matrix cs_v = e(V)
+
+. 
+. * 2. Gardner DID-2S (2021)
+. did2s Y, first_stage(i.i i.t) second_stage(F*event L*event) treatment(D) clus
+> ter(i)
+(0 observations deleted)
+                                      (Std. err. adjusted for clustering on i)
+------------------------------------------------------------------------------
+             | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    F10event |  -.9941939   1.106274    -0.90   0.369    -3.162451    1.174063
+     F9event |   4.957013   2.872666     1.73   0.084    -.6733095    10.58734
+     F8event |   .2664334   .8789961     0.30   0.762    -1.456367    1.989234
+     F7event |  -.0888945   .6495678    -0.14   0.891    -1.362024    1.184235
+     F6event |  -.8178228   .8927797    -0.92   0.360    -2.567639    .9319932
+     F5event |  -.3872589   .8242883    -0.47   0.638    -2.002834    1.228316
+     F4event |  -.3136686   1.028366    -0.31   0.760    -2.329229    1.701892
+     F3event |  -.5445271   .6445484    -0.84   0.398    -1.807819    .7187646
+     F2event |   .5649869    .586293     0.96   0.335    -.5841264      1.7141
+     L0event |   1.052084   .9178052     1.15   0.252    -.7467816    2.850949
+     L1event |   .1068403   1.496104     0.07   0.943     -2.82547    3.039151
+     L2event |   2.509222   1.510484     1.66   0.097    -.4512722    5.469716
+     L3event |   4.087114   1.449794     2.82   0.005      1.24557    6.928659
+     L4event |   2.019893   1.383138     1.46   0.144    -.6910069    4.730793
+     L5event |   6.425812   1.617568     3.97   0.000     3.255436    9.596187
+     L6event |   5.346005   1.786799     2.99   0.003     1.843943    8.848067
+     L7event |   5.735354   2.297072     2.50   0.013     1.233176    10.23753
+     L8event |   6.010757   1.934618     3.11   0.002     2.218975    9.802539
+     L9event |   8.993989   3.229673     2.78   0.005     2.663947    15.32403
+    L10event |   5.672976   2.425731     2.34   0.019      .918631    10.42732
+    L11event |    7.54511   3.574348     2.11   0.035     .5395166     14.5507
+    L12event |   11.65109   4.689288     2.48   0.013     2.460259    20.84193
+    L13event |   .3001341    4.15965     0.07   0.942     -7.85263    8.452898
+    L14event |   2.544416   1.014981     2.51   0.012     .5550895    4.533743
+------------------------------------------------------------------------------
+
+. matrix did2s_b = e(b)
+
+. matrix did2s_v = e(V)
+
+. 
+. * 3. Stacked event-study DID (Cengiz et al., 2019)
+. gen treat_year = Ei
+(45 missing values generated)
+
+. gen no_treat = missing(Ei)
+
+. foreach var of varlist F*event L*event {
+  2.     replace `var' = 0 if no_treat
+  3. }
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+
+. preserve
+
+. stackedev Y F*event L*event, cohort(treat_year) time(t) ///
+>     never_treat(no_treat) unit_fe(i) clust_unit(i)
+**** Building Stack 2009 ****
+**** Building Stack 2010 ****
+**** Building Stack 2011 ****
+**** Building Stack 2013 ****
+**** Building Stack 2014 ****
+**** Building Stack 2015 ****
+**** Building Stack 2016 ****
+**** Building Stack 2017 ****
+**** Building Stack 2018 ****
+**** Building Stack 2019 ****
+**** Building Stack 2023 ****
+**** Appending Stacks ****
+**** Estimating Model with reghdfe ****
+(MWFE estimator converged in 2 iterations)
+
+HDFE Linear regression                            Number of obs   =        870
+Absorbing 2 HDFE groups                           F(  24,     57) =       3.68
+Statistics robust to heteroskedasticity           Prob > F        =     0.0000
+                                                  R-squared       =     0.7364
+                                                  Adj R-squared   =     0.6329
+                                                  Within R-sq.    =     0.0340
+Number of clusters (unit_stack) =         58      Root MSE        =     6.0597
+
+                            (Std. err. adjusted for 58 clusters in unit_stack)
+------------------------------------------------------------------------------
+             |               Robust
+           Y | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    F10event |   .4702786   3.263799     0.14   0.886    -6.065367    7.005924
+     F9event |   6.151005   4.879531     1.26   0.213    -3.620087     15.9221
+     F8event |  -.1819488   3.728538    -0.05   0.961    -7.648218     7.28432
+     F7event |  -.0115663   2.218758    -0.01   0.996    -4.454552     4.43142
+     F6event |  -2.136428   3.292956    -0.65   0.519    -8.730458    4.457603
+     F5event |  -.9468628   2.434739    -0.39   0.699    -5.822344    3.928618
+     F4event |  -1.994486    1.97485    -1.01   0.317    -5.949056    1.960084
+     F3event |  -1.862978   1.954746    -0.95   0.345    -5.777289    2.051332
+     F2event |  -.2830728   2.176337    -0.13   0.897    -4.641112    4.074966
+     L0event |  -3.690109   2.124374    -1.74   0.088    -7.944094    .5638766
+     L1event |   -2.73169   2.413796    -1.13   0.262    -7.565233    2.101853
+     L2event |   -3.74233   2.229609    -1.68   0.099    -8.207045    .7223856
+     L3event |  -3.539638   2.233358    -1.58   0.119    -8.011861    .9325844
+     L4event |  -4.803051   2.364915    -2.03   0.047    -9.538713   -.0673896
+     L5event |  -3.945497   2.006586    -1.97   0.054    -7.963616    .0726217
+     L6event |  -4.843202   2.427608    -2.00   0.051    -9.704403    .0179992
+     L7event |  -3.989139    2.72843    -1.46   0.149    -9.452726    1.474449
+     L8event |  -5.234987   2.269926    -2.31   0.025    -9.780436   -.6895379
+     L9event |  -3.006521   3.048882    -0.99   0.328    -9.111802     3.09876
+    L10event |  -5.724097   4.061205    -1.41   0.164    -13.85652    2.408327
+    L11event |  -4.078644   2.711946    -1.50   0.138    -9.509223    1.351934
+    L12event |   .5391258   5.192067     0.10   0.918    -9.857808    10.93606
+    L13event |  -12.62214   2.925083    -4.32   0.000    -18.47952   -6.764766
+    L14event |  -12.89589   3.144463    -4.10   0.000    -19.19257   -6.599209
+       _cons |    88.0126   .6092708   144.46   0.000     86.79256    89.23265
+------------------------------------------------------------------------------
+
+Absorbed degrees of freedom:
+-----------------------------------------------------+
+ Absorbed FE | Categories  - Redundant  = Num. Coefs |
+-------------+---------------------------------------|
+     i#stack |        58          58           0    *|
+     t#stack |       165           1         164     |
+-----------------------------------------------------+
+* = FE nested within cluster; treated as redundant for DoF computation
+
+. restore
+
+. matrix stacked_b = e(b)
+
+. matrix stacked_v = e(V)
+
+. 
+. * 4. Conventional TWFE event study
+. reghdfe Y F*event L*event, absorb(i t) vce(cluster i)
+(MWFE estimator converged in 2 iterations)
+
+HDFE Linear regression                            Number of obs   =        420
+Absorbing 2 HDFE groups                           F(  24,     27) =     632.77
+Statistics robust to heteroskedasticity           Prob > F        =     0.0000
+                                                  R-squared       =     0.7847
+                                                  Adj R-squared   =     0.7452
+                                                  Within R-sq.    =     0.0679
+Number of clusters (i)       =         28         Root MSE        =     5.2023
+
+                                     (Std. err. adjusted for 28 clusters in i)
+------------------------------------------------------------------------------
+             |               Robust
+           Y | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    F10event |   1.040542   1.481646     0.70   0.489    -1.999545    4.080629
+     F9event |   7.349087   3.600054     2.04   0.051    -.0376142    14.73579
+     F8event |   1.287778   1.786174     0.72   0.477    -2.377147    4.952704
+     F7event |   .7499311   1.641267     0.46   0.651     -2.61767    4.117533
+     F6event |  -.8606372   1.832688    -0.47   0.642    -4.621003    2.899729
+     F5event |  -.3992838   1.502021    -0.27   0.792    -3.481177     2.68261
+     F4event |  -.9122766   1.419261    -0.64   0.526     -3.82436    1.999807
+     F3event |   -1.36972   1.443898    -0.95   0.351    -4.332355    1.592914
+     F2event |  -.3427123   1.452028    -0.24   0.815    -3.322027    2.636603
+     L0event |  -1.351232   1.265636    -1.07   0.295    -3.948102    1.245638
+     L1event |  -1.590232   1.532374    -1.04   0.309    -4.734404    1.553939
+     L2event |  -2.048575   1.973761    -1.04   0.309    -6.098398    2.001248
+     L3event |  -1.704451   1.358453    -1.25   0.220    -4.491766    1.082864
+     L4event |  -3.427526   1.597369    -2.15   0.041    -6.705057   -.1499947
+     L5event |  -1.098784   2.033361    -0.54   0.593    -5.270896    3.073329
+     L6event |  -1.773078    2.45015    -0.72   0.475    -6.800371    3.254214
+     L7event |  -1.390739   2.787487    -0.50   0.622    -7.110189    4.328712
+     L8event |  -1.652226   2.249587    -0.73   0.469    -6.267996    2.963545
+     L9event |   1.733495   3.633834     0.48   0.637    -5.722517    9.189506
+    L10event |  -1.003511   3.610699    -0.28   0.783    -8.412053    6.405031
+    L11event |  -.5745946   3.544272    -0.16   0.872     -7.84684    6.697651
+    L12event |   4.501863   5.743989     0.78   0.440     -7.28383    16.28756
+    L13event |  -6.329215   3.581733    -1.77   0.089    -13.67832    1.019894
+    L14event |  -5.311915   3.578556    -1.48   0.149    -12.65451    2.030675
+       _cons |   87.44868   1.017208    85.97   0.000     85.36154    89.53582
+------------------------------------------------------------------------------
+
+Absorbed degrees of freedom:
+-----------------------------------------------------+
+ Absorbed FE | Categories  - Redundant  = Num. Coefs |
+-------------+---------------------------------------|
+           i |        28          28           0    *|
+           t |        15           1          14     |
+-----------------------------------------------------+
+* = FE nested within cluster; treated as redundant for DoF computation
+
+. estimates store ols
+
+. 
+. * Combined figure: third palette trial (red/orange/navy/emerald), vsmall
+. * filled-circle markers, thin 60%-opacity CI lines with short caps,
+. * series dodged by -0.21(0.08)0.21.
+. event_plot cs_b#cs_v did2s_b#did2s_v stacked_b#stacked_v ols, ///
+>     stub_lag(Tp# L#event L#event L#event) ///
+>     stub_lead(Tm# F#event F#event F#event) ///
+>     plottype(scatter) ciplottype(rcap) together ///
+>     perturb(-0.21(0.08)0.21) noautolegend trimlead(10) trimlag(14) ///
+>     graph_opt( ///
+>     xtitle("Time since NAP launch (years)") ///
+>     ytitle("Animal AMR score") xlabel(`kmin'(1)`kmax', nogrid) ///
+>     xscale(range(`kmin' `kmax') extend) ylabel(, angle(horizontal) nogrid) //
+> /
+>     legend(order(1 "Callaway-Sant'Anna" 3 "Gardner DID-2S" 5 "Stacked DID" 7 
+> "TWFE OLS") ///
+>     rows(2) position(6) region(style(none))) ///
+>     xline(-0.5, lcolor(gs8) lpattern(dash)) yline(0, lcolor(gs8)) ///
+>     graphregion(color(white)) bgcolor(white)) ///
+>     /// 1) Callaway-Sant'Anna in red
+>     lag_opt1(mcolor(red) lcolor(red) msymbol(circle) msize(vsmall)) ///
+>     lead_opt1(mcolor(red) lcolor(red) msymbol(circle) msize(vsmall)) ///
+>     lag_ci_opt1(lcolor(red%60) lwidth(thin) msize(vsmall)) ///
+>     lead_ci_opt1(lcolor(red%60) lwidth(thin) msize(vsmall)) ///
+>     /// 2) Gardner DID-2S in orange
+>     lag_opt2(mcolor(orange) lcolor(orange) msymbol(circle) msize(vsmall)) ///
+>     lead_opt2(mcolor(orange) lcolor(orange) msymbol(circle) msize(vsmall)) //
+> /
+>     lag_ci_opt2(lcolor(orange%60) lwidth(thin) msize(vsmall)) ///
+>     lead_ci_opt2(lcolor(orange%60) lwidth(thin) msize(vsmall)) ///
+>     /// 3) Stacked DID in navy
+>     lag_opt3(mcolor(navy) lcolor(navy) msymbol(circle) msize(vsmall)) ///
+>     lead_opt3(mcolor(navy) lcolor(navy) msymbol(circle) msize(vsmall)) ///
+>     lag_ci_opt3(lcolor(navy%60) lwidth(thin) msize(vsmall)) ///
+>     lead_ci_opt3(lcolor(navy%60) lwidth(thin) msize(vsmall)) ///
+>     /// 4) TWFE OLS in emerald
+>     lag_opt4(mcolor(emerald) lcolor(emerald) msymbol(circle) msize(vsmall)) /
+> //
+>     lead_opt4(mcolor(emerald) lcolor(emerald) msymbol(circle) msize(vsmall)) 
+> ///
+>     lag_ci_opt4(lcolor(emerald%60) lwidth(thin) msize(vsmall)) ///
+>     lead_ci_opt4(lcolor(emerald%60) lwidth(thin) msize(vsmall))
+
+. * width(2155): match the resolution of the GUI-exported v2 PNGs.
+. graph export "`outdir'/Animal_AMR_score.png", width(2155) replace
+(file
+    C:\Users\wzq\AppData\Local\Temp\figure3-legacy-00c52a7e-74db-4c46-a7cd-32
+    > aa03127892/output/Animal_AMR_score.png not found)
+file
+    C:\Users\wzq\AppData\Local\Temp\figure3-legacy-00c52a7e-74db-4c46-a7cd-32
+    > aa03127892/output/Animal_AMR_score.png saved as PNG format
+
+. graph export "`outdir'/Animal_AMR_score.pdf", replace
+file
+    C:\Users\wzq\AppData\Local\Temp\figure3-legacy-00c52a7e-74db-4c46-a7cd-32
+    > aa03127892/output/Animal_AMR_score.pdf saved as PDF format
+
+. 
+. log close
+      name:  <unnamed>
+       log:  C:\Users\wzq\AppData\Local\Temp\figure3-legacy-00c52a7e-74db-4c46-
+> a7cd-32aa03127892/output/Animal_AMR_score.log
+  log type:  text
+ closed on:  23 Nov 2026, 13:47:01
+-------------------------------------------------------------------------------
